@@ -1,4 +1,4 @@
-name: Deploy lambda function
+# trigger on all push events to main branch
 
 on: 
   push:
@@ -11,13 +11,13 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-      - name: Set up python
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
       - name: Install libraries
         run: |
-            cd funcion
+            cd function
             python -m pip install --upgrade pip
             if [ -f requirements.txt ]; then pip install -r requirements.txt -t .; fi
       - name: Create zip bundle
