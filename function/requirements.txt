@@ -1,3 +1,4 @@
 PyGithub==1.55
 boto3==1.17.96
 PyNaCl==1.5.0
+CFFI==1.15.0
