@@ -5,13 +5,12 @@ on:
   push:
     branches:
       - main
-env:
-  BUCKET_NAME: deploy-bucket-35665
 
 jobs:
-
   lint:
     runs-on: ubuntu-latest
+    env:
+      BUCKET_NAME: deploy-bucket-35665
     steps: 
       - name: Check out code
         uses: actions/checkout@v2
