@@ -9,8 +9,6 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    env:
-      BUCKET_NAME: 'deploy-bucket-35665'
     steps: 
       - name: Check out code
         uses: actions/checkout@v2
@@ -56,6 +54,8 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     needs: build
+    env:
+      BUCKET_NAME: deploy-bucket-35665
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v2
@@ -73,6 +73,8 @@ jobs:
   nonprod:
     runs-on: ubuntu-latest
     needs: upload
+    env:
+      BUCKET_NAME: deploy-bucket-35665
     strategy:
       matrix:
         input: ["Hello", "Hi"]
@@ -104,6 +106,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: upload
+    env:
+      BUCKET_NAME: deploy-bucket-35665
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
