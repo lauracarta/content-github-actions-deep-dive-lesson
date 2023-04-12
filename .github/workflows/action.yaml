@@ -1,8 +1,12 @@
+name: Deploy my Lambda Function
+
 # trigger on all push events to main branch
 on: 
   push:
     branches:
       - main
+env:
+  BUCKET_NAME: deploy-bucket-35665
 
 jobs:
 
@@ -65,9 +69,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - name: Upload to S3
-        run: |
-         aws sts get-caller-identity
-         aws s3 cp ${{ github.sha }}.zip s3://deploy-test-bucket-84894/${{ github.repository }}/${{ github.sha }}.zip
+        run: aws s3 cp ${{ github.sha }}.zip s3://BUCKET_NAME/${{ github.repository }}/${{ github.sha }}.zip
 
   nonprod:
     runs-on: ubuntu-latest
@@ -85,18 +87,35 @@ jobs:
       - name: Create test function
         run: |
             aws lambda create-function --function-name test-function-${{ matrix.input }} \
-              --code S3Bucket="deploy-test-bucket-84894",S3Key=${{ github.repository }}/${{ github.sha }}.zip \
+              --code S3Bucket=<YOUR BUCKET NAME HERE>,S3Key=${{ github.repository }}/${{ github.sha }}.zip \
               --handler lambda_function.lambda_handler --runtime python3.8 \
-              --role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role-2
+              --role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/my-lambda-role
       - name: Invoke test function 
         run: |
             aws lambda invoke --function-name test-function-${{ matrix.input }} \
               --payload $(echo "{\"input\": \"${{ matrix.input }}\"}" | base64) \
               --output json out 
             if grep -q "Error" out; then
-              exit
+              exit1
             fi
       - name: Destroy test function
         if: ${{ always() }}
         run: |
             aws lambda delete-function --function-name test-function-${{ matrix.input }}
+  deploy:
+    runs-on: ubuntu-latest
+    needs: upload
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Update function code
+        run: |
+            aws lambda update-function-code \
+              --function-name test-function-${{ matrix.input }} \
+              --s3-bucket ${{ env.BUCKET_NAME }} \
+              --s3-key ${{ github.repository }}/${{ github.sha }}.zip \
+              --publish
