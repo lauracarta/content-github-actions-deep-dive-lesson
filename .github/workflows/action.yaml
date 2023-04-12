@@ -108,6 +108,9 @@ jobs:
     needs: upload
     env:
       BUCKET_NAME: deploy-bucket-35665
+    strategy:
+      matrix:
+        input: ["Hello", "Hi"]
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
