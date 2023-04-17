@@ -7,6 +7,7 @@ on:
       - main
 
 jobs:
+
   lint:
     runs-on: ubuntu-latest
     steps: 
@@ -54,8 +55,6 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     needs: build
-    env:
-      BUCKET_NAME: deploy-bucket-35665
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v2
@@ -68,13 +67,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - name: Upload to S3
-        run: aws s3 cp ${{ github.sha }}.zip s3://${{ env.BUCKET_NAME }}/${{ github.repository }}/${{ github.sha }}.zip
+        run: aws s3 cp ${{ github.sha }}.zip s3://<YOUR BUCKET NAME HERE>/${{ github.repository }}/${{ github.sha }}.zip
 
   nonprod:
     runs-on: ubuntu-latest
     needs: upload
-    env:
-      BUCKET_NAME: deploy-bucket-35665
     strategy:
       matrix:
         input: ["Hello", "Hi"]
@@ -88,9 +85,9 @@ jobs:
       - name: Create test function
         run: |
             aws lambda create-function --function-name test-function-${{ matrix.input }} \
-              --code S3Bucket=${{ env.BUCKET_NAME }},S3Key=${{ github.repository }}/${{ github.sha }}.zip \
+              --code S3Bucket=<YOUR BUCKET NAME HERE>,S3Key=${{ github.repository }}/${{ github.sha }}.zip \
               --handler lambda_function.lambda_handler --runtime python3.8 \
-              --role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/my-lambda-role
+              --role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/<YOUR ROLE NAME HERE>
       - name: Invoke test function 
         run: |
             aws lambda invoke --function-name test-function-${{ matrix.input }} \
@@ -106,11 +103,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: upload
-    env:
-      BUCKET_NAME: deploy-bucket-35665
-    strategy:
-      matrix:
-        input: ["Hello", "Hi"]
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -121,7 +113,18 @@ jobs:
       - name: Update function code
         run: |
             aws lambda update-function-code \
-              --function-name test-function-${{ matrix.input }} \
-              --s3-bucket ${{ env.BUCKET_NAME }} \
+              --function-name <YOUR FUNCTION NAME HERE> \
+              --s3-bucket <YOUR BUCKET NAME HERE> \
               --s3-key ${{ github.repository }}/${{ github.sha }}.zip \
               --publish
+  docs:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Deploy docs
+        uses: mhausenblas/mkdocs-deploy-gh-pages@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFIG_FILE: mkdocs.yaml
